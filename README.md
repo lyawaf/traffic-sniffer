@@ -1,2 +1,4 @@
-# traffic-sniffer
-Python Traffic Sniffer and Analyzer Framework
+```
+sudo apt-get install tshark
+pip3 install -r requirements.txt
+```
