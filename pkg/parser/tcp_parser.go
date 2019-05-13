@@ -2,6 +2,7 @@ package parser
 
 import (
 	"encoding/base64"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
@@ -36,8 +37,6 @@ func Parse(packetSource *gopacket.PacketSource, relativeIndex int) map[int]TCPSe
 				SequenceNumber: tcp.Seq >> 8,
 				Packets:        []string{base64.URLEncoding.EncodeToString(packet.Data())},
 			}
-			println("New server addr", newSession.ServerAddr)
-			println("new client addr", newSession.ClientAddr)
 			index := findTcpSession(slidingWindow, packet)
 			if index != -1 {
 				sessions[relativeIndex] = *slidingWindow[index]

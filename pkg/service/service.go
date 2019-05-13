@@ -46,7 +46,6 @@ func (s *Service) GetSessions(w http.ResponseWriter, r *http.Request) {
 		for cur.Next(ctx) {
 			var result bson.M
 			err := cur.Decode(&result)
-			println(result)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -54,7 +53,7 @@ func (s *Service) GetSessions(w http.ResponseWriter, r *http.Request) {
 		}
 		bytes, err := json.Marshal(sessions)
 		if err != nil {
-			panic("marshal failed")
+			log.Fatal("marshal failed")
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, err = w.Write(bytes)
