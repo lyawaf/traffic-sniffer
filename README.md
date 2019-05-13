@@ -8,7 +8,7 @@
   ```
 ## Drop database from mongo
 1. Install mongodb client on your system:
-(install mongo on ubuntu)[https://docs.mongodb.com/manual/tutorial/install-mongodb-on-ubuntu/]
+[install mongo on ubuntu](https://docs.mongodb.com/manual/tutorial/install-mongodb-on-ubuntu/)
 2. Connect to database
 ```
 mongo
