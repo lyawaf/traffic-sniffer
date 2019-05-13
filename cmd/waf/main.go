@@ -13,6 +13,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
 	"github.com/lyawaf/traffic-sniffer/pkg/parser"
+	"github.com/lyawaf/traffic-sniffer/pkg/service"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -49,19 +50,9 @@ func main() {
 		_, err := collection.InsertOne(ctx, bson.M{"port": session.ServerPort, "session": session})
 		fmt.Println(err)
 	}
-	ctx, _ = context.WithTimeout(context.Background(), 30*time.Second)
-	collection := dbClient.Database("streams").Collection("tcpStreams")
-	cur, err := collection.Find(ctx, bson.M{"port": 9007})
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cur.Close(ctx)
-	for cur.Next(ctx) {
-		var result bson.M
-		err := cur.Decode(&result)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(result)
-	}
+
+	service.Start()
 }

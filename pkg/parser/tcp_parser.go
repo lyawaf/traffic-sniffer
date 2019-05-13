@@ -1,17 +1,18 @@
 package parser
 
 import (
+	"encoding/base64"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
 
 type TCPSession struct {
-	ServerAddr     gopacket.Endpoint
-	ClientAddr     gopacket.Endpoint
+	ServerAddr     string
+	ClientAddr     string
 	ServerPort     uint16
 	ClientPort     uint16
 	SequenceNumber uint32
-	Packets        [][]byte
+	Packets        []string
 }
 
 func Parse(packetSource *gopacket.PacketSource, relativeIndex int) map[int]TCPSession {
@@ -27,26 +28,28 @@ func Parse(packetSource *gopacket.PacketSource, relativeIndex int) map[int]TCPSe
 		if tcp.SYN && !tcp.ACK {
 			net := packet.NetworkLayer()
 			src, dst := net.NetworkFlow().Endpoints()
-			newSesion := TCPSession{
-				ServerAddr:     dst,
-				ClientAddr:     src,
+			newSession := TCPSession{
+				ServerAddr:     dst.String(),
+				ClientAddr:     src.String(),
 				ServerPort:     uint16(tcp.DstPort),
 				ClientPort:     uint16(tcp.SrcPort),
 				SequenceNumber: tcp.Seq >> 8,
-				Packets:        [][]byte{packet.Data()},
+				Packets:        []string{base64.URLEncoding.EncodeToString(packet.Data())},
 			}
+			println("New server addr", newSession.ServerAddr)
+			println("new client addr", newSession.ClientAddr)
 			index := findTcpSession(slidingWindow, packet)
 			if index != -1 {
 				sessions[relativeIndex] = *slidingWindow[index]
 				relativeIndex += 1
 				slidingWindow = append(slidingWindow[:index], slidingWindow[index+1:]...)
 			}
-			slidingWindow = append(slidingWindow, &newSesion)
+			slidingWindow = append(slidingWindow, &newSession)
 			continue
 		}
 		index := findTcpSession(slidingWindow, packet)
 		if index != -1 {
-			slidingWindow[index].Packets = append(slidingWindow[index].Packets, packet.Data())
+			slidingWindow[index].Packets = append(slidingWindow[index].Packets, base64.URLEncoding.EncodeToString(packet.Data()))
 		}
 	}
 	for _, session := range slidingWindow {
@@ -60,10 +63,10 @@ func findTcpSession(sessions []*TCPSession, tcpPacket gopacket.Packet) int {
 	src, dst := tcpPacket.NetworkLayer().NetworkFlow().Endpoints()
 	tcp := tcpPacket.Layer(layers.LayerTypeTCP).(*layers.TCP)
 	for i, session := range sessions {
-		if src != session.ClientAddr && src != session.ServerAddr {
+		if src.String() != session.ClientAddr && src.String() != session.ServerAddr {
 			continue
 		}
-		if dst != session.ClientAddr && dst != session.ServerAddr {
+		if dst.String() != session.ClientAddr && dst.String() != session.ServerAddr {
 			continue
 		}
 		if uint16(tcp.SrcPort) != session.ClientPort && uint16(tcp.SrcPort) != session.ServerPort {
