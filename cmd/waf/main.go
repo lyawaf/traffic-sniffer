@@ -35,7 +35,7 @@ func main() {
 
 	// Loop through packets in file
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	result := parser.Parse(packetSource, 0)
+	result := parser.Parse(packetSource)
 
 	dbClient, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {

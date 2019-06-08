@@ -7,18 +7,8 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
-type TCPSession struct {
-	ServerAddr     string
-	ClientAddr     string
-	ServerPort     uint16
-	ClientPort     uint16
-	SequenceNumber uint32
-	Packets        []string
-}
-
-func Parse(packetSource *gopacket.PacketSource, relativeIndex int) map[int]TCPSession {
-	sessions := make(map[int]TCPSession)
-	var slidingWindow []*TCPSession
+func Parse(packetSource *gopacket.PacketSource) []TCPSession {
+	var sessions []TCPSession
 	for packet := range packetSource.Packets() {
 		tcpLayer := packet.Layer(layers.LayerTypeTCP)
 		if tcpLayer == nil {
@@ -35,30 +25,21 @@ func Parse(packetSource *gopacket.PacketSource, relativeIndex int) map[int]TCPSe
 				ServerPort:     uint16(tcp.DstPort),
 				ClientPort:     uint16(tcp.SrcPort),
 				SequenceNumber: tcp.Seq >> 8,
-				Packets:        []string{base64.URLEncoding.EncodeToString(packet.Data())},
+				Packets:        []Packet{
+					{
+						Owner: Client,
+						Data:  base64.URLEncoding.EncodeToString(packet.Data())},
+				},
 			}
-			index := findTcpSession(slidingWindow, packet)
-			if index != -1 {
-				sessions[relativeIndex] = *slidingWindow[index]
-				relativeIndex += 1
-				slidingWindow = append(slidingWindow[:index], slidingWindow[index+1:]...)
-			}
-			slidingWindow = append(slidingWindow, &newSession)
+			sessions = append(sessions, newSession)
 			continue
 		}
-		index := findTcpSession(slidingWindow, packet)
-		if index != -1 {
-			slidingWindow[index].Packets = append(slidingWindow[index].Packets, base64.URLEncoding.EncodeToString(packet.Data()))
-		}
-	}
-	for _, session := range slidingWindow {
-		sessions[relativeIndex] = *session
-		relativeIndex += 1
+		findTcpSession(sessions, packet)
 	}
 	return sessions
 }
 
-func findTcpSession(sessions []*TCPSession, tcpPacket gopacket.Packet) int {
+func findTcpSession(sessions []TCPSession, tcpPacket gopacket.Packet) {
 	src, dst := tcpPacket.NetworkLayer().NetworkFlow().Endpoints()
 	tcp := tcpPacket.Layer(layers.LayerTypeTCP).(*layers.TCP)
 	for i, session := range sessions {
@@ -74,7 +55,15 @@ func findTcpSession(sessions []*TCPSession, tcpPacket gopacket.Packet) int {
 		if uint16(tcp.DstPort) != session.ClientPort && uint16(tcp.DstPort) != session.ServerPort {
 			continue
 		}
-		return i
+		packet := Packet {
+			Data: base64.URLEncoding.EncodeToString(tcpPacket.Data()),
+		}
+		switch src.String() {
+		case session.ClientAddr:
+			packet.Owner = Client
+		case session.ServerAddr:
+			packet.Owner = Server
+		}
+		sessions[i].Packets = append(sessions[i].Packets, packet)
 	}
-	return -1
 }
