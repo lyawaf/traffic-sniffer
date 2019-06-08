@@ -46,8 +46,8 @@ type Label struct {
 
 var Labels = []Label{
 	{
-		Name:   "FlagIN",
-		Type:   PacketIN,
-		Regexp: regexp.MustCompile("[A-Z0-9]{31}="),
+		Name:   "test",
+		Type:   PacketOUT,
+		Regexp: regexp.MustCompile("Cells"),
 	},
 }
