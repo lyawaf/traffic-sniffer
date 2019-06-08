@@ -3,6 +3,7 @@ module github.com/lyawaf/traffic-sniffer
 go 1.12
 
 require (
+	github.com/davecgh/go-spew v1.1.1
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/gopacket v1.1.16

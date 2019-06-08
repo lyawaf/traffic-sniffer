@@ -49,7 +49,7 @@ var Labels = []Label{
 		Name:      "test label",
 		Type:      PacketOUT,
 		Regexp:    regexp.MustCompile("Cells"),
-		RawRegexp: "Cells",
+		RawRegexp: "IkNlbGxzIg==",
 		Color:     "#ffffff",
 	},
 }

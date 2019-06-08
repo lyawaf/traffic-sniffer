@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -95,7 +96,8 @@ func (s *Service) AddLabel(w http.ResponseWriter, r *http.Request) {
 		if ok := validateLabel(w, rawLabel); !ok {
 			return
 		}
-		newRegexp := regexp.MustCompile(rawLabel.Regexp)
+		decodedRegexp, err := base64.URLEncoding.DecodeString(rawLabel.Regexp)
+		newRegexp := regexp.MustCompile(string(decodedRegexp))
 		newLabel := parser.Label{
 			Name:      rawLabel.Name,
 			Color:     rawLabel.Color,
@@ -110,7 +112,13 @@ func (s *Service) AddLabel(w http.ResponseWriter, r *http.Request) {
 }
 
 func validateLabel(w http.ResponseWriter, label RawLabel) bool{
-	_, err := regexp.Compile(label.Regexp)
+	decodedRegexp, err := base64.URLEncoding.DecodeString(label.Regexp)
+	fmt.Println("Decoded regexp", string(decodedRegexp))
+	if err != nil {
+		writeAnswer(w, []byte("ERROR: Failed to decode regexp base64"))
+		return false
+	}
+	_, err = regexp.Compile(string(decodedRegexp))
 	if err != nil {
 		writeAnswer(w, []byte("ERROR: Failed to compile regexp"))
 		return false
