@@ -37,17 +37,19 @@ const (
 
 // Label uses for traffic clustering.
 type Label struct {
-	Name   string
-	Type   LabelType
-	Color  string
-	Regexp *regexp.Regexp
-	Count  int
+	Name      string         `json:"name"`
+	Type      LabelType      `json:"type"`
+	Color     string         `json:"color"`
+	Regexp    *regexp.Regexp `json:"-"`
+	RawRegexp string         `json:"regexp"`
 }
 
 var Labels = []Label{
 	{
-		Name:   "test",
-		Type:   PacketOUT,
-		Regexp: regexp.MustCompile("Cells"),
+		Name:      "test label",
+		Type:      PacketOUT,
+		Regexp:    regexp.MustCompile("Cells"),
+		RawRegexp: "Cells",
+		Color:     "#ffffff",
 	},
 }

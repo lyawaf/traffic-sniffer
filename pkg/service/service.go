@@ -4,13 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"regexp"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/lyawaf/traffic-sniffer/pkg/parser"
 )
 
 type Service struct {
@@ -27,6 +31,8 @@ func Start() {
 	}
 	s.dbClient = dbClient
 	http.HandleFunc("/", s.GetSessions)
+	http.HandleFunc("/getLabels", s.GetLabels)
+	http.HandleFunc("/addLabel", s.AddLabel)
 	log.Fatal(http.ListenAndServe(":9999", nil))
 }
 
@@ -56,9 +62,71 @@ func (s *Service) GetSessions(w http.ResponseWriter, r *http.Request) {
 			log.Fatal("marshal failed")
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, err = w.Write(bytes)
+		writeAnswer(w, bytes)
+	}
+}
+
+func (s *Service) GetLabels(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		bytes, err := json.Marshal(parser.Labels)
 		if err != nil {
-			fmt.Println("Failed to send to client", err)
+			log.Fatal("marshal failed")
 		}
+		w.Header().Set("Content-Type", "application/json")
+		writeAnswer(w, bytes)
+	case "POST":
+	}
+}
+
+func (s *Service) AddLabel(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+	case "POST":
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			fmt.Println("failed to get body")
+		}
+		var rawLabel RawLabel
+		err = json.Unmarshal(body, &rawLabel)
+		if err != nil {
+			fmt.Println("failed to parse body")
+		}
+		if ok := validateLabel(w, rawLabel); !ok {
+			return
+		}
+		newRegexp := regexp.MustCompile(rawLabel.Regexp)
+		newLabel := parser.Label{
+			Name:      rawLabel.Name,
+			Color:     rawLabel.Color,
+			Type:      parser.LabelType(rawLabel.Type),
+			Regexp:    newRegexp,
+			RawRegexp: rawLabel.Regexp,
+		}
+		parser.Labels = append(parser.Labels, newLabel)
+		fmt.Println(newLabel)
+		writeAnswer(w, []byte("SUCCESS"))
+	}
+}
+
+func validateLabel(w http.ResponseWriter, label RawLabel) bool{
+	_, err := regexp.Compile(label.Regexp)
+	if err != nil {
+		writeAnswer(w, []byte("ERROR: Failed to compile regexp"))
+		return false
+	}
+	switch label.Type {
+	case parser.PacketIN, parser.PacketOUT:
+	default:
+		writeAnswer(w, []byte("ERROR: Unknown label type"))
+		return false
+	}
+	return true
+}
+
+func writeAnswer(w http.ResponseWriter, data []byte) {
+	_, err := w.Write(data)
+	if err != nil {
+		fmt.Println("Failed to send to client", err)
 	}
 }
