@@ -31,3 +31,17 @@
     transform: rotate(360deg);
   }
 }
+
+
+.session {
+  font-size: 12px;
+}
+
+.session.Client {
+  color: blue;
+}
+
+
+.session.Server {
+  color: red;
+}

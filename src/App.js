@@ -1,26 +1,31 @@
-import React from 'react';
-import logo from './logo.svg';
+import React, {Component} from 'react';
 import './App.css';
+import Sessions from './Sessions'
+class App extends Component {
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+	state = {
+		data: []
+	}
+
+	componentDidMount() {
+		fetch('http://localhost:9999/',{'method':'POST'})
+		.then((response)=>{response.json().then((data)=> {
+			//let temp = data
+			this.setState({data:data})})})
+	}
+
+
+	
+
+
+  	render() {
+  	//console.log("state: ", this.state.data)
+    return(
+          <div>
+          	<Sessions respdata={this.state.data}/>
+          </div>
+          )}
+  
 }
 
 export default App;
