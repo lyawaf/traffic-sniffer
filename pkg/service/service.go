@@ -111,7 +111,7 @@ func (s *Service) AddLabel(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func validateLabel(w http.ResponseWriter, label RawLabel) bool{
+func validateLabel(w http.ResponseWriter, label RawLabel) bool {
 	decodedRegexp, err := base64.URLEncoding.DecodeString(label.Regexp)
 	fmt.Println("Decoded regexp", string(decodedRegexp))
 	if err != nil {

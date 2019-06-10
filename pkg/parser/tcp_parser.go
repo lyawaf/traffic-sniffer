@@ -1,49 +1,67 @@
 package parser
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"go.mongodb.org/mongo-driver/bson"
+	"log"
+	"time"
 )
 
-func Parse(packetSource *gopacket.PacketSource) []TCPSession {
-	var sessions []TCPSession
-	for packet := range packetSource.Packets() {
-		tcpLayer := packet.Layer(layers.LayerTypeTCP)
+func (p *Parser) Parse(packetSource *gopacket.PacketSource) {
+	go p.saveWorker(WAIT_TIMEOUT * 2 * time.Second)
+	for rawPacket := range packetSource.Packets() {
+		tcpLayer := rawPacket.Layer(layers.LayerTypeTCP)
 		if tcpLayer == nil {
 			continue
 		}
 		tcp, _ := tcpLayer.(*layers.TCP)
 		// new session
 		if tcp.SYN && !tcp.ACK {
-			net := packet.NetworkLayer()
-			src, dst := net.NetworkFlow().Endpoints()
-			newSession := TCPSession{
-				ServerAddr:     dst.String(),
-				ClientAddr:     src.String(),
-				ServerPort:     uint16(tcp.DstPort),
-				ClientPort:     uint16(tcp.SrcPort),
-				SequenceNumber: tcp.Seq >> 8,
-				Packets: []Packet{
-					{
-						Owner: Client,
-						Data:  base64.URLEncoding.EncodeToString(packet.Data())},
-				},
+			newSession := createNewSession(rawPacket)
+			oldSessionIndex := p.findTcpSession(rawPacket)
+			p.Lock()
+			if oldSessionIndex != -1 {
+				p.saveSession(oldSessionIndex)
+				p.sessions[oldSessionIndex] = newSession
+			} else {
+				p.sessions = append(p.sessions, newSession)
 			}
-			sessions = append(sessions, newSession)
+			p.Unlock()
 			continue
 		}
-		findTcpSession(sessions, packet)
+		i := p.findTcpSession(rawPacket)
+		if i != -1 {
+			packet := p.makePacket(i, rawPacket)
+			p.addPacketToSession(i, packet)
+		}
 	}
-	markSessions(sessions)
-	return sessions
 }
 
-func findTcpSession(sessions []TCPSession, tcpPacket gopacket.Packet) {
+func (p *Parser) saveWorker(d time.Duration) {
+	for x := range time.Tick(d) {
+		fmt.Println("[WORKER]", x)
+		var sessionsCopy []TCPSession
+		p.Lock()
+		for i, session := range p.sessions {
+			if time.Now().Second()-session.LastUpdate.Second() > WAIT_TIMEOUT {
+				fmt.Println("[WORKER] Save session.")
+				p.saveSession(i)
+			}
+			sessionsCopy = append(sessionsCopy, session)
+		}
+		p.sessions = sessionsCopy
+		p.Unlock()
+	}
+}
+
+func (p *Parser) findTcpSession(tcpPacket gopacket.Packet) int {
 	src, dst := tcpPacket.NetworkLayer().NetworkFlow().Endpoints()
 	tcp := tcpPacket.Layer(layers.LayerTypeTCP).(*layers.TCP)
-	for i, session := range sessions {
+	for i, session := range p.sessions {
 		if src.String() != session.ClientAddr && src.String() != session.ServerAddr {
 			continue
 		}
@@ -56,50 +74,61 @@ func findTcpSession(sessions []TCPSession, tcpPacket gopacket.Packet) {
 		if uint16(tcp.DstPort) != session.ClientPort && uint16(tcp.DstPort) != session.ServerPort {
 			continue
 		}
-		packet := Packet{
-			Owner: Client,
-			Data: base64.URLEncoding.EncodeToString(tcpPacket.Data()),
-		}
-		switch src.String() {
-		case session.ClientAddr:
-			packet.Owner = Client
-		case session.ServerAddr:
-			packet.Owner = Server
-		}
-		sessions[i].Packets = append(sessions[i].Packets, packet)
+		return i
+	}
+	return -1
+}
+
+func createNewSession(rawPacket gopacket.Packet) TCPSession {
+	tcpLayer := rawPacket.Layer(layers.LayerTypeTCP)
+	tcp, _ := tcpLayer.(*layers.TCP)
+	net := rawPacket.NetworkLayer()
+	src, dst := net.NetworkFlow().Endpoints()
+	newSession := TCPSession{
+		ServerAddr:     dst.String(),
+		ClientAddr:     src.String(),
+		ServerPort:     uint16(tcp.DstPort),
+		ClientPort:     uint16(tcp.SrcPort),
+		SequenceNumber: tcp.Seq >> 8,
+		LastUpdate:     time.Now(),
+		Packets: []Packet{
+			{
+				Owner: Client,
+				Data:  base64.URLEncoding.EncodeToString(rawPacket.Data())},
+		},
+	}
+	return newSession
+}
+
+func (p *Parser) saveSession(i int) {
+	markSession(p.sessions[i])
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	p.DBClient.Connect(ctx)
+	collection := p.DBClient.Database("streams").Collection("tcpStreams")
+	_, err := collection.InsertOne(ctx, bson.M{"port": p.sessions[i].ServerPort, "session": p.sessions[i]})
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
-func markSessions(sessions []TCPSession) {
-	for i, session := range sessions {
-		for _, label := range Labels {
-			if label.CheckApply(session) {
-				fmt.Println("Add label")
-				sessions[i].Labels = append(sessions[i].Labels, Label{})
-			}
-		}
+func (p *Parser) makePacket(i int, tcpPacket gopacket.Packet) Packet {
+	src, _ := tcpPacket.NetworkLayer().NetworkFlow().Endpoints()
+	packet := Packet{
+		Owner: Client,
+		Data:  base64.URLEncoding.EncodeToString(tcpPacket.Data()),
 	}
-
+	switch src.String() {
+	case p.sessions[i].ClientAddr:
+		packet.Owner = Client
+	case p.sessions[i].ServerAddr:
+		packet.Owner = Server
+	}
+	return packet
 }
 
-func (l *Label) CheckApply(session TCPSession) bool {
-	labelType := LabelTypeToOwnerType[l.Type]
-	for _, packet := range session.Packets {
-		if packet.Owner == labelType {
-			data, err := base64.URLEncoding.DecodeString(packet.Data)
-			if err != nil {
-				fmt.Println("покс")
-			}
-			matched := l.Regexp.Match(data)
-			if matched {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-var LabelTypeToOwnerType = map[LabelType]OwnerType{
-	PacketIN:  Client,
-	PacketOUT: Server,
+func (p *Parser) addPacketToSession(i int, newPacket Packet) {
+	p.Lock()
+	p.sessions[i].Packets = append(p.sessions[i].Packets, newPacket)
+	p.sessions[i].LastUpdate = time.Now()
+	p.Unlock()
 }

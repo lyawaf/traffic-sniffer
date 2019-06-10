@@ -1,8 +1,19 @@
 package parser
 
 import (
+	"go.mongodb.org/mongo-driver/mongo"
 	"regexp"
+	"sync"
+	"time"
 )
+
+const WAIT_TIMEOUT = 60
+
+type Parser struct {
+	DBClient *mongo.Client
+	sync.Mutex
+	sessions []TCPSession
+}
 
 type OwnerType string
 
@@ -24,6 +35,7 @@ type TCPSession struct {
 	SequenceNumber uint32
 	Packets        []Packet
 	Labels         []Label
+	LastUpdate     time.Time
 }
 
 // LabelType is marker for applying regexp:
