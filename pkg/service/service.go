@@ -141,6 +141,7 @@ func validateLabel(w http.ResponseWriter, label RawLabel) bool {
 }
 
 func writeAnswer(w http.ResponseWriter, data []byte) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	_, err := w.Write(data)
 	if err != nil {
 		fmt.Println("Failed to send to client", err)
