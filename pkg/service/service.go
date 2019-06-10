@@ -106,7 +106,15 @@ func (s *Service) AddLabel(w http.ResponseWriter, r *http.Request) {
 			RawRegexp: rawLabel.Regexp,
 		}
 		parser.Labels = append(parser.Labels, newLabel)
-		fmt.Println(newLabel)
+		fmt.Println("[SERVICE] Add new label", newLabel)
+		ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+		s.dbClient.Connect(ctx)
+		collection := s.dbClient.Database("streams").Collection("labels")
+		_, err = collection.InsertOne(ctx, newLabel)
+		if err != nil {
+			writeAnswer(w, []byte("ERROR: Failed to insert to database"))
+			return
+		}
 		writeAnswer(w, []byte("SUCCESS"))
 	}
 }

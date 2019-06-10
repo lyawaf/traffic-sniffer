@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log"
+	"time"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"go.mongodb.org/mongo-driver/bson"
-	"log"
-	"time"
 )
 
 func (p *Parser) Parse(packetSource *gopacket.PacketSource) {
@@ -41,6 +42,7 @@ func (p *Parser) Parse(packetSource *gopacket.PacketSource) {
 	}
 }
 
+// saveWorker saves sessions which are end by wait timeout.
 func (p *Parser) saveWorker(d time.Duration) {
 	for x := range time.Tick(d) {
 		fmt.Println("[WORKER]", x)
