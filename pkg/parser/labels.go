@@ -5,11 +5,11 @@ import (
 	"fmt"
 )
 
-func markSession(session TCPSession) {
+func (p *Parser) markSession(i int) {
 	for _, label := range Labels {
-		if label.CheckApply(session) {
+		if label.CheckApply(p.sessions[i]) {
 			fmt.Println("Add label")
-			session.Labels = append(session.Labels, Label{})
+			p.sessions[i].Labels = append(p.sessions[i].Labels, Label{})
 		}
 	}
 

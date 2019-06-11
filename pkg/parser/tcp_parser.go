@@ -12,9 +12,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func (p *Parser) Parse(packetSource *gopacket.PacketSource) {
+func (p *Parser) Parse() {
 	go p.saveWorker(WAIT_TIMEOUT * 2 * time.Second)
-	for rawPacket := range packetSource.Packets() {
+	for rawPacket := range p.Source.Packets() {
 		tcpLayer := rawPacket.Layer(layers.LayerTypeTCP)
 		if tcpLayer == nil {
 			continue
@@ -52,6 +52,7 @@ func (p *Parser) saveWorker(d time.Duration) {
 			if time.Now().Second()-session.LastUpdate.Second() > WAIT_TIMEOUT {
 				fmt.Println("[WORKER] Save session.")
 				p.saveSession(i)
+				continue
 			}
 			sessionsCopy = append(sessionsCopy, session)
 		}
@@ -103,7 +104,7 @@ func createNewSession(rawPacket gopacket.Packet) TCPSession {
 }
 
 func (p *Parser) saveSession(i int) {
-	markSession(p.sessions[i])
+	p.markSession(i)
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	p.DBClient.Connect(ctx)
 	collection := p.DBClient.Database("streams").Collection("tcpStreams")

@@ -1,15 +1,17 @@
 package parser
 
 import (
+	"github.com/google/gopacket"
 	"go.mongodb.org/mongo-driver/mongo"
 	"regexp"
 	"sync"
 	"time"
 )
 
-const WAIT_TIMEOUT = 60
+const WAIT_TIMEOUT = 5
 
 type Parser struct {
+	Source *gopacket.PacketSource
 	DBClient *mongo.Client
 	sync.Mutex
 	sessions []TCPSession

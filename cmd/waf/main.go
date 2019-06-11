@@ -38,10 +38,10 @@ func main() {
 	}
 
 	// Loop through packets in file
-	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	newParser := parser.Parser{
+		Source:   gopacket.NewPacketSource(handle, handle.LinkType()),
 		DBClient: DBClient,
 	}
-	newParser.Parse(packetSource)
+	newParser.Parse()
 	service.Start()
 }
