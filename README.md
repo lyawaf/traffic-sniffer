@@ -3,8 +3,7 @@ Python Traffic Sniffer and Analyzer Framework
 
 # Installation and setting up
 ## Linux
-Run
-To install the current LyaWAF Test Web Application and prepare a virtual environment you need:
+To install the current LyaWAF Test Web Application and prepare a virtual environment you will need:
 
 Install python version 3.6.x or newer (if it is not already installed - you can check it with “python3 --version” command):
 ```bash
