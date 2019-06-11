@@ -34,6 +34,7 @@ func Start() {
 	http.HandleFunc("/", s.GetSessions)
 	http.HandleFunc("/getLabels", s.GetLabels)
 	http.HandleFunc("/addLabel", s.AddLabel)
+	fmt.Println("[SERVICE] Start.")
 	log.Fatal(http.ListenAndServe(":9999", nil))
 }
 

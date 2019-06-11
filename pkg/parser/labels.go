@@ -9,7 +9,7 @@ func (p *Parser) markSession(i int) {
 	Labels.Lock()
 	for _, label := range Labels.L {
 		if label.CheckApply(p.sessions[i]) {
-			fmt.Println("Add label")
+			fmt.Println("[LABELS] Add label")
 			p.sessions[i].Labels = append(p.sessions[i].Labels, Label{})
 		}
 	}

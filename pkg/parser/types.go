@@ -1,13 +1,14 @@
 package parser
 
 import (
-	"github.com/google/gopacket"
-	"go.mongodb.org/mongo-driver/mongo"
 	"regexp"
 	"sync"
+
+	"github.com/google/gopacket"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-const WAIT_TIMEOUT = 20
+const WAIT_TIMEOUT = 5
 
 var DBClient *mongo.Client
 
@@ -64,8 +65,8 @@ var Labels = struct {
 }{L: []Label{
 	{
 		Name:      "test label",
-		Type:      PacketOUT,
-		Regexp:    regexp.MustCompile("Cells"),
+		Type:      PacketIN,
+		Regexp:    regexp.MustCompile("asdf"),
 		RawRegexp: "IkNlbGxzIg==",
 		Color:     "#ffffff",
 	},

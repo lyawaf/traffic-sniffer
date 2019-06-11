@@ -51,7 +51,6 @@ func (p *Parser) saveWorker(d time.Duration) {
 		p.Lock()
 		for i, session := range p.sessions {
 			if time.Now().Unix()-session.LastUpdate > WAIT_TIMEOUT {
-				fmt.Println("[WORKER] Save session.")
 				p.saveSession(i)
 				continue
 			}
@@ -107,6 +106,7 @@ func createNewSession(rawPacket gopacket.Packet) TCPSession {
 func (p *Parser) saveSession(i int) {
 	p.markSession(i)
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	DBClient.Connect(ctx)
 	collection := DBClient.Database("streams").Collection("tcpStreams")
 	_, err := collection.InsertOne(ctx, bson.M{
 		"port":        p.sessions[i].ServerPort,
@@ -116,13 +116,13 @@ func (p *Parser) saveSession(i int) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("[SAVER] Save new session.")
 }
 
 func (p *Parser) makePacket(i int, tcpPacket gopacket.Packet) Packet {
 	src, _ := tcpPacket.NetworkLayer().NetworkFlow().Endpoints()
 	packet := Packet{
-		Owner: Client,
-		Data:  base64.URLEncoding.EncodeToString(tcpPacket.Data()),
+		Data: base64.URLEncoding.EncodeToString(tcpPacket.Data()),
 	}
 	switch src.String() {
 	case p.sessions[i].ClientAddr:
