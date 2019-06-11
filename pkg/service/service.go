@@ -41,10 +41,26 @@ func (s *Service) GetSessions(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 	case "POST":
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			fmt.Println("failed to get body")
+		}
+		var timeStamp struct {
+			LastUpdate int64 `json:"lastUpdate"`
+		}
+		err = json.Unmarshal(body, &timeStamp)
+		if err != nil {
+			fmt.Println("failed to parse body")
+		}
+
 		ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
 		s.dbClient.Connect(ctx)
 		collection := s.dbClient.Database("streams").Collection("tcpStreams")
-		cur, err := collection.Find(ctx, bson.M{"port": 9007})
+		cur, err := collection.Find(ctx,
+			bson.M{"last_update": bson.M{
+				"$gt": timeStamp.LastUpdate,
+			},
+			})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -105,8 +121,11 @@ func (s *Service) AddLabel(w http.ResponseWriter, r *http.Request) {
 			Regexp:    newRegexp,
 			RawRegexp: rawLabel.Regexp,
 		}
-		parser.Labels = append(parser.Labels, newLabel)
+		parser.Labels.Lock()
+		parser.Labels.L = append(parser.Labels.L, newLabel)
+		parser.Labels.Unlock()
 		fmt.Println("[SERVICE] Add new label", newLabel)
+
 		ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
 		s.dbClient.Connect(ctx)
 		collection := s.dbClient.Database("streams").Collection("labels")
@@ -115,6 +134,9 @@ func (s *Service) AddLabel(w http.ResponseWriter, r *http.Request) {
 			writeAnswer(w, []byte("ERROR: Failed to insert to database"))
 			return
 		}
+
+		go parser.UpdateLabels(newLabel)
+
 		writeAnswer(w, []byte("SUCCESS"))
 	}
 }

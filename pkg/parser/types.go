@@ -5,14 +5,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"regexp"
 	"sync"
-	"time"
 )
 
-const WAIT_TIMEOUT = 5
+const WAIT_TIMEOUT = 20
+
+var DBClient *mongo.Client
 
 type Parser struct {
 	Source *gopacket.PacketSource
-	DBClient *mongo.Client
 	sync.Mutex
 	sessions []TCPSession
 }
@@ -37,7 +37,7 @@ type TCPSession struct {
 	SequenceNumber uint32
 	Packets        []Packet
 	Labels         []Label
-	LastUpdate     time.Time
+	LastUpdate     int64
 }
 
 // LabelType is marker for applying regexp:
@@ -58,7 +58,10 @@ type Label struct {
 	RawRegexp string         `json:"regexp"`
 }
 
-var Labels = []Label{
+var Labels = struct {
+	sync.Mutex
+	L []Label
+}{L: []Label{
 	{
 		Name:      "test label",
 		Type:      PacketOUT,
@@ -66,4 +69,4 @@ var Labels = []Label{
 		RawRegexp: "IkNlbGxzIg==",
 		Color:     "#ffffff",
 	},
-}
+}}

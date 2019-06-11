@@ -39,9 +39,9 @@ func main() {
 
 	// Loop through packets in file
 	newParser := parser.Parser{
-		Source:   gopacket.NewPacketSource(handle, handle.LinkType()),
-		DBClient: DBClient,
+		Source: gopacket.NewPacketSource(handle, handle.LinkType()),
 	}
+	parser.DBClient = DBClient
 	newParser.Parse()
 	service.Start()
 }

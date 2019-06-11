@@ -6,12 +6,14 @@ import (
 )
 
 func (p *Parser) markSession(i int) {
-	for _, label := range Labels {
+	Labels.Lock()
+	for _, label := range Labels.L {
 		if label.CheckApply(p.sessions[i]) {
 			fmt.Println("Add label")
 			p.sessions[i].Labels = append(p.sessions[i].Labels, Label{})
 		}
 	}
+	Labels.Unlock()
 
 }
 

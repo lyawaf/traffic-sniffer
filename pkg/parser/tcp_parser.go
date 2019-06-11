@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"log"
 	"time"
 
@@ -49,7 +50,7 @@ func (p *Parser) saveWorker(d time.Duration) {
 		var sessionsCopy []TCPSession
 		p.Lock()
 		for i, session := range p.sessions {
-			if time.Now().Second()-session.LastUpdate.Second() > WAIT_TIMEOUT {
+			if time.Now().Unix()-session.LastUpdate > WAIT_TIMEOUT {
 				fmt.Println("[WORKER] Save session.")
 				p.saveSession(i)
 				continue
@@ -93,7 +94,7 @@ func createNewSession(rawPacket gopacket.Packet) TCPSession {
 		ServerPort:     uint16(tcp.DstPort),
 		ClientPort:     uint16(tcp.SrcPort),
 		SequenceNumber: tcp.Seq >> 8,
-		LastUpdate:     time.Now(),
+		LastUpdate:     time.Now().Unix(),
 		Packets: []Packet{
 			{
 				Owner: Client,
@@ -106,9 +107,12 @@ func createNewSession(rawPacket gopacket.Packet) TCPSession {
 func (p *Parser) saveSession(i int) {
 	p.markSession(i)
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	p.DBClient.Connect(ctx)
-	collection := p.DBClient.Database("streams").Collection("tcpStreams")
-	_, err := collection.InsertOne(ctx, bson.M{"port": p.sessions[i].ServerPort, "session": p.sessions[i]})
+	collection := DBClient.Database("streams").Collection("tcpStreams")
+	_, err := collection.InsertOne(ctx, bson.M{
+		"port":        p.sessions[i].ServerPort,
+		"session":     p.sessions[i],
+		"last_update": time.Now().Unix(),
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -132,6 +136,26 @@ func (p *Parser) makePacket(i int, tcpPacket gopacket.Packet) Packet {
 func (p *Parser) addPacketToSession(i int, newPacket Packet) {
 	p.Lock()
 	p.sessions[i].Packets = append(p.sessions[i].Packets, newPacket)
-	p.sessions[i].LastUpdate = time.Now()
+	p.sessions[i].LastUpdate = time.Now().Unix()
 	p.Unlock()
+}
+
+func UpdateLabels(label Label) {
+	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	DBClient.Connect(ctx)
+	collection := DBClient.Database("streams").Collection("tcpStreams")
+	cur, err := collection.Find(ctx, bson.M{"port": 9007})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cur.Close(ctx)
+	for cur.Next(ctx) {
+		var result bson.M
+		err := cur.Decode(&result)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("===================================")
+		spew.Dump(result)
+	}
 }
