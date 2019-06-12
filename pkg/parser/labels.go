@@ -9,7 +9,6 @@ func (p *Parser) markSession(i int) {
 	Labels.Lock()
 	for _, label := range Labels.L {
 		if label.CheckApply(p.sessions[i]) {
-			fmt.Println("[LABELS] Add label")
 			p.sessions[i].Labels = append(p.sessions[i].Labels, label)
 		}
 	}
@@ -27,6 +26,7 @@ func (l *Label) CheckApply(session TCPSession) bool {
 			}
 			matched := l.Regexp.Match(data)
 			if matched {
+
 				return true
 			}
 		}

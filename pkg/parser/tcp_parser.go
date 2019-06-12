@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"log"
 	"time"
 
@@ -100,14 +99,13 @@ func createNewSession(rawPacket gopacket.Packet) TCPSession {
 				Data:  base64.StdEncoding.EncodeToString(rawPacket.Data())},
 		},
 	}
+	fmt.Printf(InfoColor, "[PARSER] New session from: ")
+	fmt.Println(newSession.ClientAddr)
 	return newSession
 }
 
 func (p *Parser) saveSession(i int) {
 	p.markSession(i)
-	fmt.Println("======================================================")
-	spew.Dump(p.sessions[i].Labels)
-	spew.Dump(bson.Marshal(p.sessions[i].Labels))
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	DBClient.Connect(ctx)
 	collection := DBClient.Database("streams").Collection("tcpStreams")
@@ -119,7 +117,15 @@ func (p *Parser) saveSession(i int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("[SAVER] Save new session.")
+	fmt.Printf(DebugColor, "=================================================\n")
+	fmt.Printf(InfoColor, "[SAVER] Save new session.\n")
+	fmt.Printf(NoticeColor, "CLIENT IP: ")
+	fmt.Println(p.sessions[i].ClientAddr)
+	for _, label := range p.sessions[i].Labels {
+		fmt.Printf(NoticeColor, "LABEL: ")
+		labelRegex, _ := base64.StdEncoding.DecodeString(label.RawRegexp)
+		fmt.Println(label.Name, ":", string(labelRegex))
+	}
 }
 
 func (p *Parser) makePacket(i int, tcpPacket gopacket.Packet) Packet {

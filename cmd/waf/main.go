@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	device       string = "lo"
+	device       string = "wlp3s0:"
 	snapshot_len int32  = 1024
 	promiscuous  bool   = false
 	err          error
@@ -42,12 +42,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Only capturing TCP port 5000 packets.")
+	fmt.Printf(parser.InfoColor, "[MAIN] Only capturing TCP port 5000 packets.\n")
 
 	DBClient, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
 	parser.DBClientForUpdater, err = mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
-		fmt.Println("Failed to create db client", err)
+		fmt.Printf(parser.ErrorColor, "Failed to create db client", err)
 		return
 	}
 
@@ -56,6 +56,6 @@ func main() {
 	}
 	parser.DBClient = DBClient
 	go newParser.Parse()
-	fmt.Println("[MAIN] Parser start")
+	fmt.Printf(parser.InfoColor, "[MAIN] Parser start\n")
 	service.Start()
 }

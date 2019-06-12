@@ -8,7 +8,15 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-const WAIT_TIMEOUT = 5
+const WAIT_TIMEOUT = 1
+
+const (
+	InfoColor    = "\033[1;34m%s\033[0m"
+	NoticeColor  = "\033[1;36m%s\033[0m"
+	WarningColor = "\033[1;33m%s\033[0m"
+	ErrorColor   = "\033[1;31m%s\033[0m"
+	DebugColor   = "\033[0;36m%s\033[0m"
+)
 
 var DBClient *mongo.Client
 var DBClientForUpdater *mongo.Client
@@ -65,10 +73,24 @@ var Labels = struct {
 	L []Label
 }{L: []Label{
 	{
-		Name:      "test label",
+		Name:      "ASDF label",
 		Type:      PacketIN,
 		Regexp:    regexp.MustCompile("asdf"),
-		RawRegexp: "IkNlbGxzIg==",
+		RawRegexp: "YXNkZg==",
+		Color:     "#ffffff",
+	},
+	{
+		Name:      "SQL quotes",
+		Type:      PacketIN,
+		Regexp:    regexp.MustCompile(`('(''|[^'])*')`),
+		RawRegexp: "KCcoJyd8W14nXSkqJykK",
+		Color:     "#ffffff",
+	},
+	{
+		Name:      "SQL commands",
+		Type:      PacketIN,
+		Regexp:    regexp.MustCompile(`(\b(ALTER|CREATE|DELETE|DROP|EXEC(UTE){0,1}|INSERT( +INTO){0,1}|MERGE|SELECT|UPDATE|UNION( +ALL){0,1})\b)`),
+		RawRegexp: "KCcoJyd8W14nXSkqJyl8KFxiKEFMVEVSfENSRUFURXxERUxFVEV8RFJPUHxFWEVDKFVURSl7MCwxfXxJTlNFUlQoICtJTlRPKXswLDF9fE1FUkdFfFNFTEVDVHxVUERBVEV8VU5JT04oICtBTEwpezAsMX0pXGIp",
 		Color:     "#ffffff",
 	},
 }}
