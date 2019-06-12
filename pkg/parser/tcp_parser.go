@@ -97,7 +97,7 @@ func createNewSession(rawPacket gopacket.Packet) TCPSession {
 		Packets: []Packet{
 			{
 				Owner: Client,
-				Data:  base64.URLEncoding.EncodeToString(rawPacket.Data())},
+				Data:  base64.StdEncoding.EncodeToString(rawPacket.Data())},
 		},
 	}
 	return newSession
@@ -105,6 +105,9 @@ func createNewSession(rawPacket gopacket.Packet) TCPSession {
 
 func (p *Parser) saveSession(i int) {
 	p.markSession(i)
+	fmt.Println("======================================================")
+	spew.Dump(p.sessions[i].Labels)
+	spew.Dump(bson.Marshal(p.sessions[i].Labels))
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	DBClient.Connect(ctx)
 	collection := DBClient.Database("streams").Collection("tcpStreams")
@@ -122,7 +125,7 @@ func (p *Parser) saveSession(i int) {
 func (p *Parser) makePacket(i int, tcpPacket gopacket.Packet) Packet {
 	src, _ := tcpPacket.NetworkLayer().NetworkFlow().Endpoints()
 	packet := Packet{
-		Data: base64.URLEncoding.EncodeToString(tcpPacket.Data()),
+		Data: base64.StdEncoding.EncodeToString(tcpPacket.Data()),
 	}
 	switch src.String() {
 	case p.sessions[i].ClientAddr:
@@ -138,24 +141,4 @@ func (p *Parser) addPacketToSession(i int, newPacket Packet) {
 	p.sessions[i].Packets = append(p.sessions[i].Packets, newPacket)
 	p.sessions[i].LastUpdate = time.Now().Unix()
 	p.Unlock()
-}
-
-func UpdateLabels(label Label) {
-	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
-	DBClient.Connect(ctx)
-	collection := DBClient.Database("streams").Collection("tcpStreams")
-	cur, err := collection.Find(ctx, bson.M{"port": 9007})
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer cur.Close(ctx)
-	for cur.Next(ctx) {
-		var result bson.M
-		err := cur.Decode(&result)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println("===================================")
-		spew.Dump(result)
-	}
 }

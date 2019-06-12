@@ -45,6 +45,7 @@ func main() {
 	fmt.Println("Only capturing TCP port 5000 packets.")
 
 	DBClient, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
+	parser.DBClientForUpdater, err = mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		fmt.Println("Failed to create db client", err)
 		return

@@ -143,7 +143,7 @@ func (s *Service) AddLabel(w http.ResponseWriter, r *http.Request) {
 }
 
 func validateLabel(w http.ResponseWriter, label RawLabel) bool {
-	decodedRegexp, err := base64.URLEncoding.DecodeString(label.Regexp)
+	decodedRegexp, err := base64.StdEncoding.DecodeString(label.Regexp)
 	fmt.Println("Decoded regexp", string(decodedRegexp))
 	if err != nil {
 		writeAnswer(w, []byte("ERROR: Failed to decode regexp base64"))

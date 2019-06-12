@@ -11,6 +11,7 @@ import (
 const WAIT_TIMEOUT = 5
 
 var DBClient *mongo.Client
+var DBClientForUpdater *mongo.Client
 
 type Parser struct {
 	Source *gopacket.PacketSource
@@ -52,11 +53,11 @@ const (
 
 // Label uses for traffic clustering.
 type Label struct {
-	Name      string         `json:"name"`
-	Type      LabelType      `json:"type"`
-	Color     string         `json:"color"`
-	Regexp    *regexp.Regexp `json:"-"`
-	RawRegexp string         `json:"regexp"`
+	Name      string
+	Type      LabelType
+	Color     string
+	Regexp    *regexp.Regexp
+	RawRegexp string
 }
 
 var Labels = struct {
