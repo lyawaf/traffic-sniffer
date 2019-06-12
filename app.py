@@ -30,8 +30,10 @@ def login():
         if (request.form.get("username"), request.form.get("password")) == (
             DefaultCredentials.username,
             DefaultCredentials.password,
-        ):
+        ):  
             return redirect(url_for("success_login"))
+        print("username is:", request.form.get("username"))
+        print("password is:", request.form.get("password"))
         return render_template(
             "login.html", error="Invalid Credentials. Please try again."
         )
@@ -39,4 +41,4 @@ def login():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)
