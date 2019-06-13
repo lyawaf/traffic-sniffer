@@ -1,17 +1,42 @@
 import React, {Component} from 'react';
 import './App.css';
 import Sessions from './Sessions'
+import AddLabelForm from './AddLabelForm'
+import Labels from './Labels'
 class App extends Component {
 
 	state = {
-		data: []
+		data: [],
+		currentLabel: {},
+		lastUpdate : 0
 	}
 
 	componentDidMount() {
-		fetch('http://localhost:9999/',{'method':'POST'})
+		let data = JSON.stringify({"lastUpdate": 0})
+		fetch('http://localhost:9999/',{'method':'POST','body':data})
 		.then((response)=>{response.json().then((data)=> {
 			//let temp = data
+			//console.log("data= ", data[data.length-1].last_update)
 			this.setState({data:data})})})
+	}
+
+	componentDidUpdate(prevState) {
+	let data = JSON.stringify({"lastUpdate": 0})
+  if(prevState.data!==this.state.data) {
+    fetch('http://localhost:9999',{'method':'POST','body':data})
+    .then((response)=>{response.json().then((data)=> {
+      //let temp = data
+       
+      //console.log("data= ", data)
+      this.setState({data:data})}
+
+
+      )})
+  }
+}
+
+	chngLabel = (e) => {
+		this.setState({currentLabel:e})
 	}
 
 
@@ -19,10 +44,13 @@ class App extends Component {
 
 
   	render() {
-  	//console.log("state: ", this.state.data)
+  //	console.log("state: ", this.state.lastUpdate)
     return(
           <div>
+          	<Labels/>
           	<Sessions respdata={this.state.data}/>
+          	<AddLabelForm/>
+          	
           </div>
           )}
   

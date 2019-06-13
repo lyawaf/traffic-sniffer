@@ -6,7 +6,7 @@ class Sessions extends Component {
   	let data = this.props.respdata
   	let sessionsList
   	//console.log('data: ', data)
-  	if(data.length) {
+  	if(data!==null&&data.length) {
   		//console.log(data[0]._id)
 		sessionsList = data.map((index)=>
 			<div key={index._id}>
@@ -16,7 +16,7 @@ class Sessions extends Component {
 	else
 		sessionsList = <div>Loading...</div>
     return(
-      <div>
+      <div className="sessions">
       {sessionsList}
       </div>
       )

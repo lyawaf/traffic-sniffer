@@ -17,6 +17,7 @@
   justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
+
 }
 
 .App-link {
@@ -35,6 +36,11 @@
 
 .session {
   font-size: 12px;
+  margin-top: 100px;
+  position: relative;
+  white-space:pre-wrap;
+  text-align: justify;
+
 }
 
 .session.Client {
@@ -44,4 +50,148 @@
 
 .session.Server {
   color: red;
+}
+
+.label-cont {
+  margin-left: 100px;
+  margin-top: 50px;
+}
+
+.labels {
+  position: relative;
+  float: left;
+  margin-left: 0px;
+
+
+}
+
+.label {
+  float: left;
+  height: 50px;
+  width: 115px;
+  border-radius: 4px;
+  border:  1px solid black;
+  
+}
+
+
+.label.long{
+
+}
+
+.holder {}
+
+.holder.loder-with-block{}
+
+.holder.holder-with-block:hover .hide-block {
+  display: block;
+}
+
+.hide-block {
+    left:6px;
+    bottom:0;
+    right:0;
+    top:0;
+    background:lightgreen;
+    border: 1px solid black; 
+    border-radius: 6px;
+    display: none;
+    margin-top: 55px;
+    font-size: 9px;
+    height: 40px;
+    width: 250px;
+    text-align:center;
+    vertical-align: middle;
+    position: absolute;
+}
+
+.session-button {
+  float: right;
+  margin-top:10px;
+  margin-right: 25%;
+  height: 40px; 
+  width:130px;
+  background-color: #2196F3;
+  border:  1px solid black;
+  border-radius: 6px;
+  color: white;
+}
+
+.sessions {
+  position: absolute;
+  margin-top:150px;
+  margin-left: 100px;
+}
+
+.form {
+  position: absolute;
+  margin-top: 200px;
+  margin-left: 76%;
+  border:1px solid black;
+  border-radius: 6px;
+  width: 200px;
+  height: 300px;
+}
+
+
+.sess-info {
+  float: left;
+  background-color: #FFFFFF; 
+  width:780px;
+  height:60px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+  border-radius: 6px;
+  border: 1px solid black;
+  visibility: visible;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.client-info {
+  float:left;
+  margin-top:10px;
+  margin-left: 25%;
+}
+
+.label-logo {
+  margin-bottom: 0;
+  margin-left: 6px;
+  border:1px solid black;
+  border-top-right-radius: 6px;
+  border-top-left-radius: 6px;
+  height: 20px;
+  width: 115px;
+}
+
+.sess-cont {
+  margin-bottom: 100px;
+}
+
+
+.select {
+
+  border:  1px solid black;
+  border-radius: 6px;
+ 
+}
+
+
+.input {
+  background-color: #2196F3;
+  border:  1px solid black;
+  border-radius: 6px;
+  color: white;
+  margin-left: 30%;
+}
+
+label {
+  margin-left: 10px;
+}
+
+
+input {
+  margin-left: 10px;
+  border:  1px solid lightgray;
+  border-radius: 6px;
 }
