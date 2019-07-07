@@ -15,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/lyawaf/traffic-sniffer/pkg/parser"
 )
 
@@ -31,115 +32,105 @@ func Start() {
 		return
 	}
 	s.dbClient = dbClient
-	http.HandleFunc("/", s.GetSessions)
-	http.HandleFunc("/getLabels", s.GetLabels)
-	http.HandleFunc("/addLabel", s.AddLabel)
+	router := httprouter.New()
+	router.GET("/", s.GetSessions)
+	router.GET("/getLabels", s.GetLabels)
+	router.POST("/addLabel", s.AddLabel)
 	fmt.Println("[SERVICE] Start.")
-	log.Fatal(http.ListenAndServe(":9999", nil))
+	log.Fatal(http.ListenAndServe(":9999", router))
 }
 
-func (s *Service) GetSessions(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "GET":
-	case "POST":
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			fmt.Println("failed to get body")
-		}
-		var timeStamp struct {
-			LastUpdate int64 `json:"lastUpdate"`
-		}
-		err = json.Unmarshal(body, &timeStamp)
-		if err != nil {
-			fmt.Println("failed to parse body")
-		}
+func (s *Service) GetSessions(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Println("failed to get body")
+	}
+	var timeStamp struct {
+		LastUpdate int64 `json:"lastUpdate"`
+	}
+	err = json.Unmarshal(body, &timeStamp)
+	if err != nil {
+		fmt.Println("failed to parse body")
+	}
 
-		ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
-		s.dbClient.Connect(ctx)
-		collection := s.dbClient.Database("streams").Collection("tcpStreams")
-		cur, err := collection.Find(ctx,
-			bson.M{"last_update": bson.M{
-				"$gt": timeStamp.LastUpdate,
-			},
-			})
+	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	s.dbClient.Connect(ctx)
+	collection := s.dbClient.Database("streams").Collection("tcpStreams")
+	cur, err := collection.Find(ctx,
+		bson.M{"last_update": bson.M{
+			"$gt": timeStamp.LastUpdate,
+		},
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cur.Close(ctx)
+	var sessions []bson.M
+	for cur.Next(ctx) {
+		var result bson.M
+		err := cur.Decode(&result)
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer cur.Close(ctx)
-		var sessions []bson.M
-		for cur.Next(ctx) {
-			var result bson.M
-			err := cur.Decode(&result)
-			if err != nil {
-				log.Fatal(err)
-			}
-			sessions = append(sessions, result)
-		}
-		bytes, err := json.Marshal(sessions)
-		if err != nil {
-			log.Fatal("marshal failed")
-		}
-		w.Header().Set("Content-Type", "application/json")
-		writeAnswer(w, bytes)
+		sessions = append(sessions, result)
 	}
+	bytes, err := json.Marshal(sessions)
+	if err != nil {
+		log.Fatal("marshal failed")
+	}
+	w.Header().Set("Content-Type", "application/json")
+	writeAnswer(w, bytes)
 }
 
-func (s *Service) GetLabels(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "GET":
-		bytes, err := json.Marshal(parser.Labels)
-		if err != nil {
-			log.Fatal("marshal failed")
-		}
-		w.Header().Set("Content-Type", "application/json")
-		writeAnswer(w, bytes)
-	case "POST":
+func (s *Service) GetLabels(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	bytes, err := json.Marshal(parser.Labels)
+	if err != nil {
+		log.Fatal("marshal failed")
 	}
+	w.Header().Set("Content-Type", "application/json")
+	writeAnswer(w, bytes)
 }
 
-func (s *Service) AddLabel(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "GET":
-	case "POST":
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			fmt.Println("failed to get body")
-		}
-		var rawLabel RawLabel
-		err = json.Unmarshal(body, &rawLabel)
-		if err != nil {
-			fmt.Println("failed to parse body")
-		}
-		if ok := validateLabel(w, rawLabel); !ok {
-			return
-		}
-		decodedRegexp, err := base64.URLEncoding.DecodeString(rawLabel.Regexp)
-		newRegexp := regexp.MustCompile(string(decodedRegexp))
-		newLabel := parser.Label{
-			Name:      rawLabel.Name,
-			Color:     rawLabel.Color,
-			Type:      parser.LabelType(rawLabel.Type),
-			Regexp:    newRegexp,
-			RawRegexp: rawLabel.Regexp,
-		}
-		parser.Labels.Lock()
-		parser.Labels.L = append(parser.Labels.L, newLabel)
-		parser.Labels.Unlock()
-		fmt.Println("[SERVICE] Add new label", newLabel)
-
-		ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
-		s.dbClient.Connect(ctx)
-		collection := s.dbClient.Database("streams").Collection("labels")
-		_, err = collection.InsertOne(ctx, newLabel)
-		if err != nil {
-			writeAnswer(w, []byte("ERROR: Failed to insert to database"))
-			return
-		}
-
-		go parser.UpdateLabels(newLabel)
-
-		writeAnswer(w, []byte("SUCCESS"))
+func (s *Service) AddLabel(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Println("failed to get body")
 	}
+	var rawLabel RawLabel
+	err = json.Unmarshal(body, &rawLabel)
+	if err != nil {
+		fmt.Println("failed to parse body")
+	}
+	if ok := validateLabel(w, rawLabel); !ok {
+		return
+	}
+	decodedRegexp, err := base64.URLEncoding.DecodeString(rawLabel.Regexp)
+	newRegexp := regexp.MustCompile(string(decodedRegexp))
+	newLabel := parser.Label{
+		Name:      rawLabel.Name,
+		Color:     rawLabel.Color,
+		Type:      parser.LabelType(rawLabel.Type),
+		Regexp:    newRegexp,
+		RawRegexp: rawLabel.Regexp,
+	}
+	parser.Labels.Lock()
+	parser.Labels.L = append(parser.Labels.L, newLabel)
+	parser.Labels.Unlock()
+	fmt.Println("[SERVICE] Add new label", newLabel)
+
+	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	s.dbClient.Connect(ctx)
+	collection := s.dbClient.Database("streams").Collection("labels")
+	_, err = collection.InsertOne(ctx, newLabel)
+	if err != nil {
+		writeAnswer(w, []byte("ERROR: Failed to insert to database"))
+		return
+	}
+
+	go parser.UpdateLabels(newLabel)
+
+	writeAnswer(w, []byte("SUCCESS"))
+
 }
 
 func validateLabel(w http.ResponseWriter, label RawLabel) bool {
