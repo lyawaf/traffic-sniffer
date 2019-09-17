@@ -5,21 +5,7 @@ import (
 	"sync"
 
 	"github.com/google/gopacket"
-	"go.mongodb.org/mongo-driver/mongo"
 )
-
-const WAIT_TIMEOUT = 1
-
-const (
-	InfoColor    = "\033[1;34m%s\033[0m"
-	NoticeColor  = "\033[1;36m%s\033[0m"
-	WarningColor = "\033[1;33m%s\033[0m"
-	ErrorColor   = "\033[1;31m%s\033[0m"
-	DebugColor   = "\033[0;36m%s\033[0m"
-)
-
-var DBClient *mongo.Client
-var DBClientForUpdater *mongo.Client
 
 type Parser struct {
 	Source *gopacket.PacketSource
