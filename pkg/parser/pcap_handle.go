@@ -30,7 +30,7 @@ func LoadToDB(sessionPCAP string, dbClient *mongo.Client, ctx context.Context) {
 	if err != nil {
 		log.Fatal("failed to insert session", err)
 	}
-    fmt.Println("Save new session from", sessionPCAP)
+	fmt.Println("Save new session from", sessionPCAP)
 }
 
 func CreateSession(source *gopacket.PacketSource) TCPSession {
