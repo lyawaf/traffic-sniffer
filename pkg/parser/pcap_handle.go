@@ -15,15 +15,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func LoadToDB(sessionPCAP string, dbClient *mongo.Client) {
+func LoadToDB(sessionPCAP string, dbClient *mongo.Client, ctx context.Context) {
 	handle, err := pcap.OpenOffline(sessionPCAP)
-	fmt.Println("Open session pcap", err)
 	defer handle.Close()
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	session := CreateSession(packetSource)
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	_ = dbClient.Connect(ctx)
 	collection := dbClient.Database("streams").Collection("tcpStreams")
 	_, err = collection.InsertOne(ctx, bson.M{
 		"port":        session.ServerPort,
@@ -31,10 +28,9 @@ func LoadToDB(sessionPCAP string, dbClient *mongo.Client) {
 		"last_update": time.Now().Unix(),
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("failed to insert session", err)
 	}
-
-	fmt.Println("Disconnect from mongo!!", dbClient.Disconnect(context.TODO()))
+    fmt.Println("Save new session from", sessionPCAP)
 }
 
 func CreateSession(source *gopacket.PacketSource) TCPSession {

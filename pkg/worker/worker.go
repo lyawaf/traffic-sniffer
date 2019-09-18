@@ -1,6 +1,7 @@
 package worker
 
 import (
+    "context"
 	"fmt"
 	"log"
 	"os"
@@ -9,16 +10,18 @@ import (
 	"github.com/lyawaf/traffic-sniffer/pkg/parser"
 	"github.com/lyawaf/traffic-sniffer/pkg/tshark"
 	"go.mongodb.org/mongo-driver/mongo"
+    "go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Worker struct {
 	dirPath  string
 	nextPath string
-	DBClient *mongo.Client
 	Watcher  *fsnotify.Watcher
+    DbClient *mongo.Client
+    Ctx context.Context
 }
 
-func StartWatcher(dirPath string, dbClient *mongo.Client) {
+func StartWatcher(dirPath string) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
@@ -27,11 +30,21 @@ func StartWatcher(dirPath string, dbClient *mongo.Client) {
 		_ = watcher.Close()
 	}()
 
+    dbClient, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
+    if err != nil {
+        fmt.Println("Failed to create db client", err)
+        return
+    }
+    ctx, _ := context.WithCancel(context.Background())
+    err = dbClient.Connect(ctx)
+
+
 	w := Worker{
 		dirPath:  dirPath,
 		nextPath: "",
 		Watcher:  watcher,
-		DBClient: dbClient,
+        DbClient: dbClient,
+        Ctx: ctx,
 	}
 
 	done := make(chan bool)
@@ -48,15 +61,20 @@ func (w *Worker) handlePath() {
 			if !ok {
 				return
 			}
-			log.Println("event:", event)
-			if event.Op&fsnotify.Write == fsnotify.Create {
+			if event.Op&fsnotify.Create == fsnotify.Create {
 				go func() {
-					files, tempDir := tshark.SeparateSessions(w.nextPath)
-					w.nextPath = w.dirPath + event.Name
-					for _, s := range files {
-						parser.LoadToDB(s, w.DBClient)
-					}
-					os.RemoveAll(tempDir)
+                    if w.nextPath != "" {
+                        files, tempDir := tshark.SeparateSessions(w.nextPath)
+                        for _, s := range files {
+                            if s == "" {
+                                continue
+                            }
+                            fmt.Println("trying to load to db with", s)
+                            parser.LoadToDB(s, w.DbClient, w.Ctx)
+                        }
+                        os.RemoveAll(tempDir)
+                    }
+					w.nextPath = event.Name
 				}()
 			}
 		case err, ok := <-w.Watcher.Errors:
